@@ -668,46 +668,47 @@ def final_create_dataframe_I94s(spark,filePath, \
 
 def main():    
     """
-    - establishes a Spark session 
-    - create the datframes economics_country , economics_us_state , temperature_country ,
-        temperature_us_state. Use those tables to create the datframes I94s
-    - write the dimension tables economics_country , economics_us_state , temperature_country ,
-        temperature_us_state and fact table I94s
-    
+    Establishes a Spark session and creates the dataframes.
+    Writes the dimension tables and fact table to disk.
     """    
     
     spark = SparkSession.builder.\
-    config("spark.jars.repositories", "https://repos.spark-packages.org/").\
-    config("spark.jars.packages", "saurfang:spark-sas7bdat:2.0.0-s_2.11").\
-    appName('Pivot() Stack() PySpark'). \
-    enableHiveSupport().getOrCreate()
+        config("spark.jars.repositories", "https://repos.spark-packages.org/").\
+        config("spark.jars.packages", "saurfang:spark-sas7bdat:2.0.0-s_2.11").\
+        appName('Pivot() Stack() PySpark'). \
+        enableHiveSupport().getOrCreate()
     
-    ##############create the datframes 
-    economics_country = final_create_dataframe_economics_country(spark,'political_stability_country.csv', \
-                                                                 'unemployment_country.csv', \
-                                                                 'population_country.csv')
-    economics_us_state = final_create_dataframe_economics_us_state(spark,'unemployment_us_state.csv')
+    # Create the dataframes
+    economics_country = final_create_dataframe_economics_country(
+        spark, 'political_stability_country.csv', 
+        'unemployment_country.csv', 'population_country.csv'
+    )
+    economics_us_state = final_create_dataframe_economics_us_state(
+        spark, 'unemployment_us_state.csv'
+    )
+    temperature_country = final_create_dataframe_temperature_country(
+        spark, 'temperature_country_us_state.csv'
+    )
+    temperature_us_state = final_create_dataframe_temperature_us_state(
+        spark, 'temperature_country_us_state.csv'
+    )
+    I94s = final_create_dataframe_I94s(
+        spark, '../../data/18-83510-I94-Data-2016/i94_apr16_sub.sas7bdat', 
+        economics_country, economics_us_state, temperature_country, 
+        temperature_us_state
+    )
 
-    temperature_country = final_create_dataframe_temperature_country(spark,'temperature_country_us_state.csv')
-    temperature_us_state = final_create_dataframe_temperature_us_state(spark,'temperature_country_us_state.csv')
-
-    I94s = final_create_dataframe_I94s(spark,'../../data/18-83510-I94-Data-2016/i94_apr16_sub.sas7bdat', \
-                                       economics_country, \
-                                       economics_us_state, \
-                                       temperature_country, \
-                                       temperature_us_state
-                                      )
-
-    ############# write the fact table I94s and the four dimension tables temperature_us_state, temperature_country, economics_us_state, economics_country
-
-    I94s.write.parquet("fact_dimension_tables_02/I94s.parquet",partitionBy=['i94yr','i94mon'])
-
-    temperature_us_state.write.parquet("fact_dimension_tables_02/temperature_us_state.parquet",partitionBy=['year','state_name'])
-    temperature_country.write.parquet("fact_dimension_tables_02/temperature_country.parquet",partitionBy=['year','country_name'])
-
-    economics_us_state.write.parquet("fact_dimension_tables_02/economics_us_state.parquet",partitionBy=['year','month'])
-    economics_country.write.parquet("fact_dimension_tables_02/economics_country.parquet",partitionBy=['year'])
-
+    # Write the tables to disk
+    I94s.write.parquet("fact_dimension_tables_02/I94s.parquet",
+                       partitionBy=['i94yr','i94mon'])
+    temperature_us_state.write.parquet("fact_dimension_tables_02/temperature_us_state.parquet",
+                                       partitionBy=['year','state_name'])
+    temperature_country.write.parquet("fact_dimension_tables_02/temperature_country.parquet",
+                                      partitionBy=['year','country_name'])
+    economics_us_state.write.parquet("fact_dimension_tables_02/economics_us_state.parquet",
+                                     partitionBy=['year','month'])
+    economics_country.write.parquet("fact_dimension_tables_02/economics_country.parquet",
+                                    partitionBy=['year'])
 
 if __name__ == "__main__":
     main()
